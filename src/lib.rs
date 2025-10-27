@@ -16,6 +16,12 @@ pub struct BarConfig {
     pub show_rate: bool,
     /// Width of the progress bar in characters.
     pub width: usize,
+    /// Character used to fill the completed portion.
+    pub fill_char: char,
+    /// Character used for empty portion.
+    pub empty_char: char,
+    /// Character used for the arrow tip.
+    pub arrow_char: char,
 }
 
 impl Default for BarConfig {
@@ -27,6 +33,9 @@ impl Default for BarConfig {
             show_arrow: true,
             show_rate: false,
             width: 50,
+            fill_char: '=',
+            empty_char: ' ',
+            arrow_char: '>',
         }
     }
 }
@@ -35,7 +44,7 @@ impl Default for BarConfig {
 /// 
 /// # Example
 /// ```
-/// use progress::BasicProgressBar;
+/// use simpleprogress::BasicProgressBar;
 /// 
 /// let mut bar = BasicProgressBar::new(100.0);
 /// bar.set(50.0);
@@ -90,6 +99,25 @@ impl BasicProgressBar {
         self
     }
 
+    /// Set the width of the progress bar in characters.
+    pub fn width(mut self, width: usize) -> Self {
+        self.config.width = width;
+        self
+    }
+
+    /// Set custom characters for the bar appearance.
+    /// 
+    /// # Arguments
+    /// * `fill` - Character for the completed portion (default '=')
+    /// * `empty` - Character for the empty portion (default ' ')
+    /// * `arrow` - Character for the arrow tip (default '>')
+    pub fn chars(mut self, fill: char, empty: char, arrow: char) -> Self {
+        self.config.fill_char = fill;
+        self.config.empty_char = empty;
+        self.config.arrow_char = arrow;
+        self
+    }
+
     /// Increment the progress by 1.0.
     pub fn inc(&mut self) {
         self.current += 1.0;
@@ -101,6 +129,7 @@ impl BasicProgressBar {
     }
 
     /// Set the progress to a specific value.
+    /// Clamps the value between 0 and total.
     pub fn set(&mut self, value: f64) {
         self.current = value.max(0.0).min(self.total);
     }
@@ -122,18 +151,18 @@ impl BasicProgressBar {
                 .map(|i| {
                     if self.config.show_arrow {
                         if i < filled.saturating_sub(1) {
-                            '='
+                            self.config.fill_char
                         } else if i == filled.saturating_sub(1) && filled > 0 {
-                            '>'
+                            self.config.arrow_char
                         } else {
-                            ' '
+                            self.config.empty_char
                         }
                     } else {
                         // Without arrow: fill completely
                         if i < filled {
-                            '='
+                            self.config.fill_char
                         } else {
-                            ' '
+                            self.config.empty_char
                         }
                     }
                 })
@@ -190,10 +219,11 @@ impl BasicProgressBar {
 /// 
 /// # Example
 /// ```
-/// use progress::Spinner;
+/// use simpleprogress::Spinner;
 /// 
 /// let mut spinner = Spinner::new();
-/// // update spinner.current_frame and print in a loop
+/// spinner.tick();
+/// spinner.print();
 /// ```
 pub struct Spinner {
     frames: Vec<char>,
@@ -210,24 +240,34 @@ impl Spinner {
         }
     }
 
+    /// Set the initial message displayed next to the spinner.
     pub fn with_message(mut self, msg: &str) -> Self {
         self.message = msg.to_string();
         self
     }
 
+    /// Update the spinner message.
+    pub fn set_message(&mut self, msg: &str) {
+        self.message = msg.to_string();
+    }
+
+    /// Advance to the next frame.
     pub fn tick(&mut self) {
         self.current_frame = (self.current_frame + 1) % self.frames.len();
     }
 
+    /// Render the spinner as a string.
     pub fn render(&self) -> String {
         format!("{} {}", self.frames[self.current_frame], self.message)
     }
 
+    /// Print the spinner to stdout, overwriting the current line.
     pub fn print(&self) {
         print!("\r{}\x1b[K", self.render());
         std::io::stdout().flush().unwrap();
     }
 
+    /// Print a final message and move to the next line.
     pub fn finish(&self, final_msg: &str) {
         println!("\r{}", final_msg);
     }
