@@ -102,7 +102,7 @@ impl BasicProgressBar {
 
     /// Set the progress to a specific value.
     pub fn set(&mut self, value: f64) {
-        self.current = value;
+        self.current = value.max(0.0).min(self.total);
     }
 
     /// Render the progress bar as a string.
